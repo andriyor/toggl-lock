@@ -6,5 +6,5 @@ COPY lib lib
 RUN mkdir /data && chown node /data
 USER node
 ENV STATE_FILE=/data/state.json
-EXPOSE 8790
-CMD ["node", "toggl-poll.ts"]
+EXPOSE 8790 8788
+CMD ["node", "toggl-webhook.ts"]

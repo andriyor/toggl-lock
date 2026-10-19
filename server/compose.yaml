@@ -11,6 +11,6 @@ services:
       - state:/data
     ports:
       - "8790:8790"
-    # webhook mode: command: ["node", "toggl-webhook.ts"], and add "8788:8788" to ports
+      - "8788:8788" # webhook; for polling instead: command: ["node", "toggl-poll.ts"] and drop this port
 volumes:
   state:

@@ -2,6 +2,7 @@
 // Env: see lib/*, plus
 //   TOGGL_WEBHOOK_SECRET  the secret given when creating the subscription
 //   WEBHOOK_PORT          default 8788, serves only POST /toggl; expose only this port
+//   TOGGL_FALLBACK_POLL_MINUTES  default 15 (~4 req/h); catches webhooks that never arrived
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { keepAlive } from "./lib/activity.ts";
 import type { IncomingHttpHeaders } from "node:http";
@@ -25,6 +26,8 @@ function verify(raw: string, headers: IncomingHttpHeaders) {
 keepAlive();
 serveApp();
 sync(); // catch up on anything that changed while the server was down
+// Safety net: a lost delivery (server down, tunnel flap, subscription disabled) is fixed within this.
+setInterval(sync, Number(process.env.TOGGL_FALLBACK_POLL_MINUTES || 15) * 60_000);
 // Separate port so exposing the webhook doesn't expose /state (push tokens) or /start.
 serve(WEBHOOK_PORT, {
   "POST /toggl": (b, raw, headers) => {
