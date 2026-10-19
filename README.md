@@ -68,15 +68,23 @@ When the quota runs out the server pauses until it resets.
 Toggl calls the server on every time-entry change. Needs a public HTTPS URL.
 
 1. Pick a random secret and get your workspace id.
-2. Expose **only** port 8788 (it serves just the signed `POST /toggl`), e.g. `tailscale funnel 8788`
-   (stable URL) or `cloudflared tunnel --url http://localhost:8788` (URL changes each run).
+2. Expose **only** port 8788 (it serves just the signed `POST /toggl`). With a named Cloudflare
+   Tunnel: dashboard → Networking → Tunnels → your tunnel → Routes → Add route → Published
+   application, Service URL `http://localhost:8788` (mine: `https://toggl-hook.oreh.uk`). Keep it one
+   subdomain level deep, or the free certificate won't cover it. Quick alternatives: `tailscale funnel
+8788` or `cloudflared tunnel --url http://localhost:8788` (URL changes each run).
    Port 8790 holds push tokens in `/state` — expose it only with `APP_SECRET` set (see Hosting).
-3. Set `TOGGL_WEBHOOK_SECRET=<secret>` in `server/.env`, run `npm run start:webhook` in `server/`.
+3. Set `TOGGL_WEBHOOK_SECRET=<secret>` in `server/.env` (webhook mode exits without it), run
+   `npm run start:webhook` in `server/`. Check the public URL reaches this server and not something
+   else on that port: `curl -X POST -d '{}' https://<public-host>/toggl` must answer `400` (bad signature).
 4. Subscribe (the server answers Toggl's validation ping itself):
 
        curl -u $TOGGL_API_TOKEN:api_token -H 'Content-Type: application/json' \
          -d '{"url_callback":"https://<public-host>/toggl","event_filters":[{"entity":"time_entry","action":"*"}],"enabled":true,"description":"LockActivity","secret":"<secret>"}' \
          https://api.track.toggl.com/webhooks/api/v1/subscriptions/<workspace_id>
+
+   The reply should have `validated_at` set. `GET` the same URL lists subscriptions; the workspace id
+   is in `GET /api/v9/me/workspaces`.
 
 ### Which one?
 
@@ -89,8 +97,9 @@ Toggl calls the server on every time-entry change. Needs a public HTTPS URL.
 
 Polling at 20 s is plenty for a glanceable timer, and 180 req/h is inside the quota Toggl grants, so
 load on Toggl is no real argument either way. Pick webhooks if you already have a tunnel and want to be
-a light API user. Webhook mode also polls every `TOGGL_FALLBACK_POLL_MINUTES` (default 15, ~4
-req/h), since Toggl disables a subscription after repeated failed deliveries. Middle ground: `TOGGL_POLL_SECONDS=60` (60/h, ≤1 min delay, nothing public).
+a light API user. Webhook mode also polls every `TOGGL_FALLBACK_POLL_MINUTES` (default 15,
+~4 req/h), since Toggl disables a subscription after repeated failed deliveries. Middle ground:
+`TOGGL_POLL_SECONDS=60` (60/h, ≤1 min delay, nothing public).
 
 ## How the server works
 
