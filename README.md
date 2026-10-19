@@ -180,7 +180,9 @@ unless noted; "—" means not tested.
 So Toggl's app now push-starts its activity from the server side, but doesn't follow later changes;
 keeping the Lock Screen in sync with timers changed elsewhere is what this project adds.
 
-## Why a server at all (research)
+## Research
+
+### Why a server at all
 
 - iOS suspends apps ~30 s after backgrounding; no long-lived connection or on-device polling.
   Background App Refresh runs when iOS decides (often hours apart).
@@ -195,3 +197,37 @@ keeping the Lock Screen in sync with timers changed elsewhere is what this proje
 - The [Toggl Focus API](https://engineering.toggl.com/docs/focus/) (the other Toggl product) has a
   `tracking/current` endpoint but no webhooks; Toggl Track has
   [webhooks](https://engineering.toggl.com/docs/track/webhooks_start/).
+
+### Apple Watch
+
+The activity shows up in the watch's Smart Stack on its own: by default watchOS draws the compact
+Dynamic Island views, and `.supplementalActivityFamilies([.small])` in `LockWidget.swift` gives it its own
+layout (icon, project, timer; needs iOS 18).
+
+The small icon for the Live Activity at the top of the watch face stays **blank** (default empty
+circle). Tried, Oct 2026, iPhone 17 + Apple Watch Series 7:
+
+- The iPhone app icon is fine (1024 px, no alpha), so a broken icon isn't the cause.
+- `.small` layout: fixes the Smart Stack card, not the watch-face icon.
+- An icon-only watchOS app (single-target, embedded in the iPhone app, no networking): the icon
+  showed up in the watch's app list but **not** for the Live Activity, even after restarting the
+  watch and re-creating the activity. Removed again.
+  Side note: installing it needed Developer Mode on the watch and a build straight to the watch,
+  so the watch got added to the team's provisioning profile. Without that, Install in the iPhone's
+  Watch app fails silently.
+- Apple doesn't document which image that icon uses
+  ([Apple Support](https://support.apple.com/guide/watch/bz1vx4mwqbw9/watchos),
+  [WWDC24 session 10098](https://developer.apple.com/videos/play/wwdc2024/10098/)).
+
+### APNs limits
+
+- Priority-10 Live Activity pushes draw from an hourly budget Apple doesn't publish. Past it,
+  updates are throttled even though APNs still returns 200. `NSSupportsLiveActivitiesFrequentUpdates`
+  (set in `ios/project.yml`) raises the budget, and the user can turn it off in Settings.
+- An activity lives at most 8 h, then stays on the Lock Screen up to 4 h as ended. The server
+  re-creates it at 7.5 h.
+- Provider JWT: refresh at most every 20 min (else `429 TooManyProviderTokenUpdates`) and at
+  least hourly. `server/lib/apns.ts` reuses it for 50 min.
+- Apple prefers one long-lived HTTP/2 connection. `apns.ts` opens one per push, which is fine at
+  a few pushes per timer change.
+- Payload ≤ 4 KB. Sandbox tokens only work with `api.sandbox.push.apple.com`.
