@@ -1,7 +1,4 @@
 name: LockActivity
-include:
-  - path: push.yml
-    enable: ${ENABLE_PUSH}
 options:
   bundleIdPrefix: com.andriyor
   # match swift-format's defaults so Xcode doesn't fight the formatter
@@ -35,6 +32,15 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Sends Live Activity push tokens to your server.
+        AppSecret: $(APP_SECRET)
+    entitlements:
+      path: App/LockActivity.entitlements
+      properties:
+        aps-environment: development
+    # APP_SECRET (server/.env) lives in the gitignored Secrets.xcconfig: this repo is public
+    configFiles:
+      Debug: Secrets.xcconfig
+      Release: Secrets.xcconfig
     dependencies:
       - target: LockWidget
     settings:

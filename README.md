@@ -32,11 +32,11 @@ server's TypeScript directly (type stripping) — no build step, no `npm install
        cd server && npm start   # = node --env-file=.env toggl-poll.ts; needs no npm install
 
 5. Build and run the app on the iPhone (same Wi-Fi as the Mac), allow Local Network access.
-   In Xcode: `cd ios && ENABLE_PUSH=true xcodegen generate && open LockActivity.xcodeproj`, then Run.
+   In Xcode: `cd ios && xcodegen generate && open LockActivity.xcodeproj`, then Run.
    Or from the terminal:
 
        cd ios
-       ENABLE_PUSH=true xcodegen generate
+       xcodegen generate
        xcodebuild -project LockActivity.xcodeproj -scheme LockActivity -destination 'id=<device-udid>' \
          -derivedDataPath build -allowProvisioningUpdates build
        xcrun devicectl device install app --device <device-udid> build/Build/Products/Debug-iphoneos/LockActivity.app
@@ -161,12 +161,6 @@ Needs an always-on process (restart tick, state file) and HTTP/2 to APNs, so ser
 - **Detect a swiped-away activity**: the app could report `activityStateUpdates` (`.dismissed`/`.ended`)
   so the server re-creates it without waiting for the next app launch — only while iOS lets the app
   run, so not guaranteed.
-
-## Without push (free Apple team)
-
-    cd ios && xcodegen generate && open LockActivity.xcodeproj
-
-The app starts a local activity with its own text and restarts it when opened; no server, no Toggl.
 
 ## Compared with other apps
 
