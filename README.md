@@ -78,6 +78,21 @@ Toggl calls the server on every time-entry change. Needs a public HTTPS URL.
          -d '{"url_callback":"https://<public-host>/toggl","event_filters":[{"entity":"time_entry","action":"*"}],"enabled":true,"description":"LockActivity","secret":"<secret>"}' \
          https://api.track.toggl.com/webhooks/api/v1/subscriptions/<workspace_id>
 
+### Which one?
+
+|                   | Polling, 20 s (240/h quota)      | Webhooks                                                    |
+| ----------------- | -------------------------------- | ----------------------------------------------------------- |
+| Worst-case delay  | 20 s                             | ~1 s                                                        |
+| Requests to Toggl | ~180/h, ~4,300/day               | 1 `GET` per change + fallback poll: ~150/day (~95% fewer)   |
+| Public surface    | none                             | `:8788` via a tunnel + a Toggl subscription to keep enabled |
+| Missed events     | impossible; next poll catches up | stale until the next change, unless a fallback poll runs    |
+
+Polling at 20 s is plenty for a glanceable timer, and 180 req/h is inside the quota Toggl grants, so
+load on Toggl is no real argument either way. Pick webhooks if you already have a tunnel and want to be
+a light API user. `toggl-webhook.ts` has no fallback poll yet: Toggl disables a subscription after
+repeated failed deliveries, so add `setInterval(sync, 15 * 60_000)` (~4 req/h) when running it for
+real. Middle ground: `TOGGL_POLL_SECONDS=60` (60/h, ≤1 min delay, nothing public).
+
 ## How the server works
 
 | File                                              | Role                                                                                      |
