@@ -9,7 +9,7 @@ options:
   tabWidth: 2
   usesTabs: false
   deploymentTarget:
-    iOS: "17.2"
+    iOS: "18.0"  # supplementalActivityFamilies (Apple Watch layout)
 settings:
   base:
     SWIFT_VERSION: "5.0"
